@@ -1,0 +1,15 @@
+{
+  "settings": {
+    "carName": "My Car Support",
+    "model": "1994 Nissan",
+    "plate": "",
+    "defaultEconomy": 8,
+    "tankCapacity": 40,
+    "reserveLiters": 5,
+    "currentOdometer": 0
+  },
+  "fuel": [],
+  "trips": [],
+  "maintenance": [],
+  "issues": []
+}

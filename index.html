@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#12372a" />
+  <meta name="description" content="Offline car fuel, trip, maintenance, and issue monitoring app." />
+  <title>My Car Support</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">OFFLINE VEHICLE MONITOR</p>
+      <h1 id="carNameHeader">My Car Support</h1>
+      <p id="carSubtitle">Nissan • Manual • Roxas City</p>
+    </div>
+    <button id="installBtn" class="secondary hidden" type="button">Install App</button>
+  </header>
+
+  <main>
+    <section id="dashboard" class="page active">
+      <div class="warning-card">
+        <strong>Safety note:</strong>
+        <span>This app only provides estimates. Never rely on it as a replacement for a working fuel gauge, temperature gauge, or professional inspection.</span>
+      </div>
+
+      <div class="stats-grid">
+        <article class="stat-card">
+          <span>Estimated Fuel</span>
+          <strong id="estimatedFuel">0.0 L</strong>
+          <small id="estimatedRange">Estimated range: 0 km</small>
+        </article>
+        <article class="stat-card">
+          <span>Average Economy</span>
+          <strong id="averageEconomy">8.0 km/L</strong>
+          <small>Used for fuel estimates</small>
+        </article>
+        <article class="stat-card">
+          <span>Current Odometer</span>
+          <strong id="currentOdometer">0 km</strong>
+          <small id="distanceSinceFuel">0 km since last fuel entry</small>
+        </article>
+        <article class="stat-card danger-border">
+          <span>Open Issues</span>
+          <strong id="openIssues">0</strong>
+          <small id="urgentIssues">0 urgent</small>
+        </article>
+      </div>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Quick Update</h2>
+            <p>Update the odometer after every trip.</p>
+          </div>
+        </div>
+        <form id="quickOdometerForm" class="form-grid">
+          <label>
+            Current odometer (km)
+            <input id="quickOdometer" type="number" min="0" step="0.1" required />
+          </label>
+          <label>
+            Trip note
+            <input id="quickTripNote" type="text" placeholder="School, Pueblo, Robinsons..." />
+          </label>
+          <button type="submit">Save Trip Reading</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Next Recommended Actions</h2>
+            <p>Based on your records.</p>
+          </div>
+        </div>
+        <div id="recommendations" class="list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Recent Activity</h2>
+            <p>Your latest fuel, trip, maintenance, and issue records.</p>
+          </div>
+        </div>
+        <div id="recentActivity" class="list"></div>
+      </section>
+    </section>
+
+
+    <section id="live" class="page">
+      <section class="speed-dashboard">
+        <div class="speed-topline">
+          <div>
+            <p class="eyebrow dark">GPS DRIVING DASHBOARD</p>
+            <h2>Live Drive</h2>
+          </div>
+          <span id="gpsStatus" class="gps-status">GPS inactive</span>
+        </div>
+
+        <div class="speedometer">
+          <span id="liveSpeed">0</span>
+          <small>km/h</small>
+        </div>
+
+        <div class="drive-grid">
+          <article><span>Trip distance</span><strong id="liveDistance">0.00 km</strong></article>
+          <article><span>Drive time</span><strong id="liveDuration">00:00:00</strong></article>
+          <article><span>Average speed</span><strong id="liveAverage">0.0 km/h</strong></article>
+          <article><span>Maximum speed</span><strong id="liveMaximum">0.0 km/h</strong></article>
+          <article><span>GPS accuracy</span><strong id="liveAccuracy">—</strong></article>
+          <article><span>Estimated fuel used</span><strong id="liveFuelUsed">0.00 L</strong></article>
+        </div>
+
+        <label class="dashboard-field">
+          Trip name
+          <input id="liveTripName" type="text" placeholder="School drive, Pueblo trip..." />
+        </label>
+
+        <div class="drive-actions">
+          <button id="startDriveBtn" type="button">Start Drive</button>
+          <button id="pauseDriveBtn" class="secondary" type="button" disabled>Pause</button>
+          <button id="finishDriveBtn" class="danger" type="button" disabled>Finish & Save</button>
+        </div>
+
+        <div class="speed-warning">
+          Mount the phone securely. Do not hold or operate it while driving. GPS speed and distance are estimates and may be inaccurate in tunnels, covered areas, or weak-signal locations.
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Live GPS Notes</h2>
+            <p>Keep the app visible for the most reliable tracking.</p>
+          </div>
+        </div>
+        <div class="list">
+          <div class="list-item"><h3>Location permission</h3><p>The phone will ask for permission when you start a drive.</p></div>
+          <div class="list-item"><h3>Screen awake</h3><p>The app will try to keep the display awake while tracking when the device supports it.</p></div>
+          <div class="list-item"><h3>Background limitation</h3><p>Mobile browsers may slow or stop GPS updates after the screen locks or the app goes into the background.</p></div>
+        </div>
+      </section>
+    </section>
+
+    <section id="fuel" class="page">
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Add Fuel</h2>
+            <p>Record liters and odometer every time you refuel.</p>
+          </div>
+        </div>
+        <form id="fuelForm" class="form-grid">
+          <label>Date and time<input id="fuelDate" type="datetime-local" required /></label>
+          <label>Odometer (km)<input id="fuelOdometer" type="number" min="0" step="0.1" required /></label>
+          <label>Amount paid (₱)<input id="fuelAmount" type="number" min="0" step="0.01" /></label>
+          <label>Liters added<input id="fuelLiters" type="number" min="0.01" step="0.01" required /></label>
+          <label>Fuel price per liter<input id="fuelPrice" type="number" min="0" step="0.01" /></label>
+          <label class="check-label"><input id="fuelFullTank" type="checkbox" /> Full tank</label>
+          <label class="full-width">Station / note<input id="fuelNote" type="text" placeholder="Unleaded, station name..." /></label>
+          <button type="submit">Save Fuel Entry</button>
+        </form>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><div><h2>Fuel History</h2><p>Newest entry first.</p></div></div>
+        <div id="fuelList" class="list"></div>
+      </section>
+    </section>
+
+    <section id="trips" class="page">
+      <section class="panel">
+        <div class="panel-heading"><div><h2>Add Trip</h2><p>Use start and end odometer for accurate monitoring.</p></div></div>
+        <form id="tripForm" class="form-grid">
+          <label>Date<input id="tripDate" type="date" required /></label>
+          <label>Trip name<input id="tripName" type="text" required placeholder="Bolo to Pueblo and back" /></label>
+          <label>Start odometer<input id="tripStart" type="number" min="0" step="0.1" required /></label>
+          <label>End odometer<input id="tripEnd" type="number" min="0" step="0.1" required /></label>
+          <label class="full-width">Route / notes<input id="tripNote" type="text" /></label>
+          <button type="submit">Save Trip</button>
+        </form>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><div><h2>Trip History</h2><p>Distance and estimated fuel use.</p></div></div>
+        <div id="tripList" class="list"></div>
+      </section>
+    </section>
+
+    <section id="maintenance" class="page">
+      <section class="panel">
+        <div class="panel-heading"><div><h2>Add Maintenance</h2><p>Record repairs, inspections, and fluid changes.</p></div></div>
+        <form id="maintenanceForm" class="form-grid">
+          <label>Date<input id="maintenanceDate" type="date" required /></label>
+          <label>Odometer<input id="maintenanceOdometer" type="number" min="0" step="0.1" /></label>
+          <label>Category
+            <select id="maintenanceCategory">
+              <option>Engine oil</option><option>Cooling system</option><option>Brakes</option>
+              <option>Battery / electrical</option><option>Tires</option><option>Steering</option>
+              <option>Transmission / clutch</option><option>Fuel system</option><option>General inspection</option><option>Other</option>
+            </select>
+          </label>
+          <label>Cost (₱)<input id="maintenanceCost" type="number" min="0" step="0.01" /></label>
+          <label class="full-width">Work performed<input id="maintenanceWork" type="text" required placeholder="Changed engine oil and filter" /></label>
+          <label>Next due odometer<input id="maintenanceNextKm" type="number" min="0" step="0.1" /></label>
+          <label>Next due date<input id="maintenanceNextDate" type="date" /></label>
+          <button type="submit">Save Maintenance</button>
+        </form>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><div><h2>Maintenance History</h2><p>Repairs and scheduled services.</p></div></div>
+        <div id="maintenanceList" class="list"></div>
+      </section>
+    </section>
+
+    <section id="issues" class="page">
+      <section class="panel">
+        <div class="panel-heading"><div><h2>Report an Issue</h2><p>Track symptoms until properly repaired.</p></div></div>
+        <form id="issueForm" class="form-grid">
+          <label>Date<input id="issueDate" type="date" required /></label>
+          <label>Severity
+            <select id="issueSeverity"><option>Low</option><option selected>Medium</option><option>High</option><option>Do not drive</option></select>
+          </label>
+          <label>System
+            <select id="issueSystem"><option>Engine</option><option>Cooling</option><option>Brakes</option><option>Fuel</option><option>Electrical</option><option>Steering</option><option>Transmission</option><option>Suspension</option><option>Other</option></select>
+          </label>
+          <label>Status<select id="issueStatus"><option>Open</option><option>Monitoring</option><option>Repaired</option></select></label>
+          <label class="full-width">Problem / symptom<textarea id="issueDescription" required placeholder="Brake sticks after driving..."></textarea></label>
+          <label class="full-width">Mechanic recommendation / notes<textarea id="issueNotes"></textarea></label>
+          <button type="submit">Save Issue</button>
+        </form>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><div><h2>Issue Log</h2><p>Never ignore brake or overheating problems.</p></div></div>
+        <div id="issueList" class="list"></div>
+      </section>
+    </section>
+
+    <section id="settings" class="page">
+      <section class="panel">
+        <div class="panel-heading"><div><h2>Vehicle Settings</h2><p>Used for calculations and reminders.</p></div></div>
+        <form id="settingsForm" class="form-grid">
+          <label>Vehicle name<input id="settingCarName" type="text" /></label>
+          <label>Model / year<input id="settingModel" type="text" /></label>
+          <label>Plate number<input id="settingPlate" type="text" /></label>
+          <label>Default economy (km/L)<input id="settingEconomy" type="number" min="1" step="0.1" /></label>
+          <label>Tank capacity (L)<input id="settingTankCapacity" type="number" min="1" step="0.1" /></label>
+          <label>Safety reserve (L)<input id="settingReserve" type="number" min="0" step="0.1" /></label>
+          <label>Current odometer<input id="settingOdometer" type="number" min="0" step="0.1" /></label>
+          <button type="submit">Save Settings</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading"><div><h2>Backup and Restore</h2><p>Data stays on this device unless you export it.</p></div></div>
+        <div class="button-row">
+          <button id="exportBtn" type="button">Export JSON Backup</button>
+          <label class="file-button">Import JSON<input id="importInput" type="file" accept=".json,application/json" /></label>
+          <button id="sampleBtn" class="secondary" type="button">Load Sample Records</button>
+          <button id="resetBtn" class="danger" type="button">Erase All Data</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>App Information</h2>
+        <p class="muted">Offline-first PWA. Records are stored as JSON in your browser's local storage. Export backups regularly, especially before clearing browser data or changing phones.</p>
+      </section>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <button data-page="dashboard" class="active"><span>⌂</span>Home</button>
+    <button data-page="live"><span>◉</span>Drive</button>
+    <button data-page="fuel"><span>⛽</span>Fuel</button>
+    <button data-page="trips"><span>↔</span>Trips</button>
+    <button data-page="maintenance"><span>🔧</span>Service</button>
+    <button data-page="issues"><span>⚠</span>Issues</button>
+    <button data-page="settings"><span>⚙</span>Settings</button>
+  </nav>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
