@@ -14,7 +14,8 @@ const defaultDB = {
   trips: [],
   maintenance: [],
   issues: [],
-  drives: []
+  drives: [],
+  odometerReadings: []
 };
 
 let db = loadDB();
@@ -91,6 +92,21 @@ function renderDashboard(){
   document.getElementById("recentActivity").innerHTML=activity.length?activity.map(a=>`<div class="list-item"><h3>${esc(a.title)}</h3><p>${esc(a.detail)}</p><p>${new Date(a.date).toLocaleString()}</p></div>`).join(""):`<div class="empty">No activity recorded yet.</div>`;
 }
 
+function renderOdometer(){
+  const current=Number(db.settings.currentOdometer||0);
+  const readings=[...(db.odometerReadings||[])].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  odometerDisplay.textContent=current.toFixed(1).padStart(8,"0");
+  odometerReading.value=current||"";
+  odometerLastUpdate.textContent=readings.length?new Date(readings[0].date).toLocaleString():"No reading yet";
+  const tracked=(db.trips||[]).reduce((sum,trip)=>sum+Math.max(0,Number.isFinite(trip.distanceKm)?trip.distanceKm:Number(trip.end||0)-Number(trip.start||0)),0);
+  odometerTrackedDistance.textContent=`${num(tracked,1)} km`;
+  odometerHistory.innerHTML=readings.length?readings.map((reading,index)=>{
+    const previous=readings[index+1];
+    const difference=previous?Number(reading.value)-Number(previous.value):null;
+    return `<div class="list-item"><div class="list-item-head"><div><h3>${num(reading.value,1)} km</h3><p>${new Date(reading.date).toLocaleString()}</p><p>${esc(reading.note||"ODO reading")}</p></div>${difference!==null?`<span class="badge">+${num(Math.max(0,difference),1)} km</span>`:""}</div></div>`;
+  }).join(""):`<div class="empty">No ODO readings saved yet.</div>`;
+}
+
 function deleteItem(type,id){
   if(!confirm("Delete this record?")) return;
   db[type]=db[type].filter(x=>x.id!==id); saveDB(); showToast("Record deleted");
@@ -115,21 +131,35 @@ function renderSettings(){
   settingCarName.value=s.carName;settingModel.value=s.model;settingPlate.value=s.plate;
   settingEconomy.value=s.defaultEconomy;settingTankCapacity.value=s.tankCapacity;settingReserve.value=s.reserveLiters;settingOdometer.value=s.currentOdometer;
 }
-function renderAll(){ renderDashboard();renderLists();renderSettings(); }
+function renderAll(){ renderDashboard();renderOdometer();renderLists();renderSettings(); }
 
-document.querySelectorAll(".bottom-nav button").forEach(btn=>btn.addEventListener("click",()=>{
-  document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.remove("active"));
+document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>{
+  document.querySelectorAll("[data-page]").forEach(b=>b.classList.remove("active"));
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   btn.classList.add("active");document.getElementById(btn.dataset.page).classList.add("active");window.scrollTo(0,0);
 }));
 
-quickOdometerForm.addEventListener("submit",e=>{
-  e.preventDefault();const newOdo=Number(quickOdometer.value);const old=Number(db.settings.currentOdometer||newOdo);
+function saveOdometerReading(newOdo,note){
+  const old=Number(db.settings.currentOdometer||newOdo);
   if(newOdo<old && !confirm("New odometer is lower than the saved reading. Continue?")) return;
   if(newOdo>old){
-    db.trips.push({id:uid(),date:today(),name:quickTripNote.value||"Odometer update",start:old,end:newOdo,note:"Quick update"});
+    db.trips.push({id:uid(),date:today(),name:note||"Odometer update",start:old,end:newOdo,note:"ODO reading"});
   }
-  db.settings.currentOdometer=newOdo;quickTripNote.value="";saveDB();showToast("Odometer updated");
+  db.odometerReadings=db.odometerReadings||[];
+  db.odometerReadings.push({id:uid(),date:new Date().toISOString(),value:newOdo,note:note||""});
+  db.settings.currentOdometer=newOdo;
+  saveDB();showToast("ODO reading saved");
+  return true;
+}
+
+quickOdometerForm.addEventListener("submit",e=>{
+  e.preventDefault();
+  if(saveOdometerReading(Number(quickOdometer.value),quickTripNote.value.trim())) quickTripNote.value="";
+});
+
+odometerForm.addEventListener("submit",e=>{
+  e.preventDefault();
+  if(saveOdometerReading(Number(odometerReading.value),odometerNote.value.trim())) odometerNote.value="";
 });
 
 fuelForm.addEventListener("submit",e=>{

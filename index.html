@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
   <header class="app-header">
@@ -18,7 +18,10 @@
       <h1 id="carNameHeader">My Car Support</h1>
       <p id="carSubtitle">Nissan • Manual • Roxas City</p>
     </div>
-    <button id="installBtn" class="secondary hidden" type="button">Install App</button>
+    <div class="header-actions">
+      <button id="settingsShortcut" class="settings-shortcut" data-page="settings" type="button" aria-label="Open settings" title="Settings">⚙</button>
+      <button id="installBtn" class="secondary hidden" type="button">Install App</button>
+    </div>
   </header>
 
   <main>
@@ -89,6 +92,33 @@
           </div>
         </div>
         <div id="recentActivity" class="list"></div>
+      </section>
+    </section>
+
+    <section id="odometer" class="page">
+      <section class="odometer-hero">
+        <p class="eyebrow dark">VEHICLE ODOMETER</p>
+        <h2>Current ODO</h2>
+        <div id="odometerDisplay" class="odometer-display" aria-label="Current odometer reading">000000.0</div>
+        <p class="odometer-unit">KILOMETERS</p>
+        <div class="odometer-summary">
+          <article><span>Last update</span><strong id="odometerLastUpdate">No reading yet</strong></article>
+          <article><span>Distance tracked</span><strong id="odometerTrackedDistance">0.0 km</strong></article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading"><div><h2>Record ODO Reading</h2><p>Enter the number shown on the car's odometer.</p></div></div>
+        <form id="odometerForm" class="form-grid">
+          <label>Current ODO (km)<input id="odometerReading" type="number" min="0" step="0.1" inputmode="decimal" required /></label>
+          <label>Note<input id="odometerNote" type="text" placeholder="Home, after service, before trip..." /></label>
+          <button type="submit">Save ODO Reading</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading"><div><h2>ODO History</h2><p>Newest reading first.</p></div></div>
+        <div id="odometerHistory" class="list"></div>
       </section>
     </section>
 
@@ -274,6 +304,7 @@
 
   <nav class="bottom-nav" aria-label="Main navigation">
     <button data-page="dashboard" class="active"><span>⌂</span>Home</button>
+    <button data-page="odometer"><span>▣</span>ODO</button>
     <button data-page="live"><span>◉</span>Drive</button>
     <button data-page="fuel"><span>⛽</span>Fuel</button>
     <button data-page="trips"><span>↔</span>Trips</button>
@@ -283,6 +314,6 @@
   </nav>
 
   <div id="toast" class="toast" role="status"></div>
-  <script src="app.js"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@
 button,input,select,textarea{font:inherit}button{cursor:pointer}
 .app-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:rgba(18,55,42,.96);color:#fff;backdrop-filter:blur(10px)}
 .app-header h1{margin:0;font-size:1.35rem}.app-header p{margin:3px 0 0;color:#dce9e3;font-size:.83rem}.eyebrow{font-weight:800;letter-spacing:.11em;font-size:.67rem!important}
+.header-actions{display:flex;align-items:center;gap:8px}.settings-shortcut{display:grid;place-items:center;width:42px;height:42px;padding:0;border:1px solid rgba(255,255,255,.22);border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:1.2rem}.settings-shortcut:hover,.settings-shortcut.active{background:#fff;color:var(--green)}
 main{max-width:1050px;margin:auto;padding:18px}.page{display:none}.page.active{display:block}
 .warning-card{display:flex;gap:10px;background:var(--warn);border:1px solid #efd98d;padding:14px;border-radius:14px;margin-bottom:16px}
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.stat-card,.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
@@ -16,7 +17,10 @@ button,.file-button{border:0;border-radius:11px;background:var(--green);color:#f
 .form-grid button{grid-column:1/-1}.button-row{display:flex;flex-wrap:wrap;gap:10px}.file-button input{display:none}
 .list{display:grid;gap:10px}.list-item{border:1px solid var(--line);border-radius:13px;padding:13px;background:#fcfdfc}.list-item-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.list-item h3{font-size:.95rem;margin:0 0 5px}.list-item p{margin:3px 0;color:var(--muted);font-size:.85rem}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#e6efe9;color:var(--green);font-size:.72rem;font-weight:800}.badge.high,.badge.do-not-drive{background:#f6dcdc;color:#8c2525}.badge.medium{background:#fff0c9;color:#7a5a00}.item-actions{display:flex;gap:7px;margin-top:10px}.item-actions button{padding:7px 10px;font-size:.75rem}
 .empty{padding:18px;text-align:center;color:var(--muted);border:1px dashed #cbd6d0;border-radius:13px}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:grid;grid-template-columns:repeat(6,1fr);background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.odometer-hero{background:linear-gradient(160deg,#0b1712,#12372a 55%,#1f5a43);color:#fff;border-radius:20px;padding:22px;margin-bottom:16px;box-shadow:0 14px 34px rgba(18,55,42,.22)}
+.odometer-hero h2{margin:3px 0 18px}.odometer-display{font-family:"Courier New",ui-monospace,monospace;font-size:clamp(2.5rem,11vw,6rem);font-weight:900;line-height:1;letter-spacing:.08em;text-align:center;color:#eaf8f0;background:#07100c;border:3px solid #587064;border-radius:14px;padding:18px 10px;box-shadow:inset 0 0 22px rgba(0,0,0,.7);font-variant-numeric:tabular-nums}
+.odometer-unit{text-align:center;letter-spacing:.28em;color:#bcd4c8;font-size:.7rem;font-weight:800;margin:10px 0 18px}.odometer-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}.odometer-summary article{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:12px}.odometer-summary span{display:block;color:#c5d8cf;font-size:.72rem}.odometer-summary strong{display:block;margin-top:5px;font-size:.92rem}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:grid;grid-template-columns:repeat(8,1fr);background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 .bottom-nav button{background:#fff;color:#66736d;border-radius:0;padding:10px 3px;font-size:.68rem}.bottom-nav button span{display:block;font-size:1.15rem;margin-bottom:2px}.bottom-nav button.active{color:var(--green);background:#eef4f0}
 .toast{position:fixed;left:50%;bottom:105px;transform:translateX(-50%) translateY(20px);opacity:0;background:#17231e;color:#fff;padding:11px 15px;border-radius:999px;transition:.2s;z-index:50;pointer-events:none}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media(max-width:780px){.stats-grid{grid-template-columns:repeat(2,1fr)}.app-header{align-items:flex-start}.form-grid{grid-template-columns:1fr}.full-width,.form-grid button{grid-column:1}.bottom-nav button{font-size:.61rem}main{padding:12px}.panel{padding:14px}}
@@ -44,9 +48,35 @@ button,.file-button{border:0;border-radius:11px;background:var(--green);color:#f
 .dashboard-field input::placeholder{color:#b9cdc3}
 .drive-actions{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:9px;margin-top:13px}
 .speed-warning{margin-top:14px;padding:11px;border-radius:11px;background:rgba(255,214,112,.13);color:#ffe7a6;font-size:.78rem;line-height:1.4}
-.bottom-nav{grid-template-columns:repeat(7,1fr)}
+.bottom-nav{grid-template-columns:repeat(8,1fr)}
 @media(max-width:780px){
   .drive-grid{grid-template-columns:repeat(2,1fr)}
   .drive-actions{grid-template-columns:1fr 1fr}.drive-actions #finishDriveBtn{grid-column:1/-1}
-  .bottom-nav button{font-size:.56rem;padding-left:1px;padding-right:1px}
+  .bottom-nav{display:flex;overflow-x:auto}.bottom-nav button{flex:1 0 64px;font-size:.56rem;padding-left:1px;padding-right:1px}
+  .odometer-display{font-size:clamp(2.2rem,12vw,4.5rem);letter-spacing:.03em}
+}
+
+/* Compact phone layout: important data first, every feature available by scrolling. */
+@media(max-width:1200px){
+  body{padding-bottom:78px;font-size:11px;background:#edf2ef}
+  .app-header{position:sticky;align-items:center;padding:9px 12px;background:linear-gradient(135deg,#0d2c20,#1f5a43);box-shadow:0 5px 18px rgba(18,55,42,.18)}.app-header h1{font-size:1rem}.app-header p{font-size:.64rem}.app-header .eyebrow{display:none}.app-header button{padding:7px 9px;font-size:.68rem}.settings-shortcut{width:34px;height:34px;padding:0;font-size:1rem}
+  main{padding:7px;max-width:none}.page{display:none}.page.active{display:block}
+  .bottom-nav{position:fixed;display:grid;grid-template-columns:repeat(4,1fr);left:8px;right:8px;bottom:8px;border:1px solid #d7e1dc;border-radius:16px;padding:4px;background:rgba(255,255,255,.96);box-shadow:0 10px 28px rgba(18,55,42,.2);overflow:hidden}
+  .bottom-nav button{display:none;min-width:0;padding:7px 3px;border-radius:11px;font-size:.6rem;background:transparent}.bottom-nav button[data-page="dashboard"],.bottom-nav button[data-page="odometer"],.bottom-nav button[data-page="live"],.bottom-nav button[data-page="trips"]{display:block}.bottom-nav button span{font-size:1rem;margin-bottom:1px}.bottom-nav button.active{color:#fff;background:linear-gradient(135deg,#12372a,#1f5a43)}
+  .warning-card{padding:6px 8px;margin-bottom:6px;border-radius:8px;gap:5px;font-size:.62rem;line-height:1.15}
+  .stats-grid{grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:6px}.stat-card{padding:6px;border-radius:8px;box-shadow:none;min-width:0}.stat-card span{font-size:.56rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stat-card strong{font-size:.82rem;margin:3px 0}.stat-card small{font-size:.5rem;line-height:1.1}.danger-border{border-left-width:3px}
+  .panel{padding:8px;margin-bottom:6px;border-radius:10px;box-shadow:none}.panel h2{font-size:.8rem}.panel-heading{margin-bottom:6px}.panel-heading p,.muted{font-size:.58rem}
+  .form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.form-grid label{font-size:.6rem;gap:2px}.form-grid input,.form-grid select,.form-grid textarea{padding:7px;border-radius:7px;font-size:.72rem;min-height:31px}.form-grid textarea{min-height:52px}.form-grid button{grid-column:1/-1;padding:7px;font-size:.7rem}.full-width{grid-column:1/-1}
+  button,.file-button{padding:7px 9px;font-size:.68rem;border-radius:7px}.button-row{gap:5px}
+  .list{gap:4px}.list-item{padding:6px;border-radius:8px}.list-item h3{font-size:.7rem;margin-bottom:2px}.list-item p{font-size:.58rem;margin:1px 0}.badge{font-size:.52rem;padding:2px 5px}.item-actions{margin-top:4px}.item-actions button{padding:4px 6px;font-size:.56rem}.empty{padding:8px;font-size:.62rem}
+  .odometer-hero,.speed-dashboard{padding:10px;margin-bottom:6px;border-radius:11px;box-shadow:none}.odometer-hero h2,.speed-topline h2{font-size:.82rem;margin-bottom:6px}.odometer-display{font-size:1.8rem;padding:8px;letter-spacing:.04em;border-width:2px}.odometer-unit{font-size:.5rem;margin:5px 0 7px}.odometer-summary{gap:4px}.odometer-summary article,.drive-grid article{padding:6px;border-radius:7px}.odometer-summary span,.drive-grid span{font-size:.52rem}.odometer-summary strong,.drive-grid strong{font-size:.66rem;margin-top:2px}
+  .speedometer{padding:10px 5px}.speedometer span{font-size:3.6rem}.speedometer small{font-size:.55rem;margin-top:7px}.drive-grid{grid-template-columns:repeat(3,1fr);gap:4px}.dashboard-field{margin-top:6px;font-size:.58rem}.dashboard-field input{padding:7px}.drive-actions{gap:4px;margin-top:6px}.speed-warning{margin-top:6px;padding:6px;font-size:.55rem}
+  .toast{bottom:18px;font-size:.65rem;padding:7px 10px}
+
+  /* Focus the phone experience on Home + ODO + Drive + Trips. */
+  #fuel,#maintenance,#issues{display:none!important}
+  #dashboard>.panel:nth-of-type(2),#dashboard>.panel:nth-of-type(3){display:none}
+  #odometer>.panel:last-child,#live>.panel{display:none}
+  #dashboard,#odometer,#live,#trips{margin:0;padding:0;border:0}
+  #dashboard::before,#trips::before{display:none}
 }
