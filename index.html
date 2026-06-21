@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=8" />
+  <link rel="stylesheet" href="styles.css?v=17" />
 </head>
 <body>
   <header class="app-header">
@@ -25,23 +25,13 @@
   </header>
 
   <main>
-    <section id="dashboard" class="page active">
+    <section id="dashboard" class="page">
       <div class="warning-card">
         <strong>Safety note:</strong>
         <span>This app only provides estimates. Never rely on it as a replacement for a working fuel gauge, temperature gauge, or professional inspection.</span>
       </div>
 
       <div class="stats-grid">
-        <article class="stat-card">
-          <span>Estimated Fuel</span>
-          <strong id="estimatedFuel">0.0 L</strong>
-          <small id="estimatedRange">Estimated range: 0 km</small>
-        </article>
-        <article class="stat-card">
-          <span>Average Economy</span>
-          <strong id="averageEconomy">8.0 km/L</strong>
-          <small>Used for fuel estimates</small>
-        </article>
         <article class="stat-card">
           <span>Current Odometer</span>
           <strong id="currentOdometer">0 km</strong>
@@ -53,26 +43,6 @@
           <small id="urgentIssues">0 urgent</small>
         </article>
       </div>
-
-      <section class="panel">
-        <div class="panel-heading">
-          <div>
-            <h2>Quick Update</h2>
-            <p>Update the odometer after every trip.</p>
-          </div>
-        </div>
-        <form id="quickOdometerForm" class="form-grid">
-          <label>
-            Current odometer (km)
-            <input id="quickOdometer" type="number" min="0" step="0.1" required />
-          </label>
-          <label>
-            Trip note
-            <input id="quickTripNote" type="text" placeholder="School, Pueblo, Robinsons..." />
-          </label>
-          <button type="submit">Save Trip Reading</button>
-        </form>
-      </section>
 
       <section class="panel">
         <div class="panel-heading">
@@ -108,22 +78,16 @@
       </section>
 
       <section class="panel">
-        <div class="panel-heading"><div><h2>Record ODO Reading</h2><p>Enter the number shown on the car's odometer.</p></div></div>
-        <form id="odometerForm" class="form-grid">
-          <label>Current ODO (km)<input id="odometerReading" type="number" min="0" step="0.1" inputmode="decimal" required /></label>
-          <label>Note<input id="odometerNote" type="text" placeholder="Home, after service, before trip..." /></label>
-          <button type="submit">Save ODO Reading</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <div class="panel-heading"><div><h2>ODO History</h2><p>Newest reading first.</p></div></div>
-        <div id="odometerHistory" class="list"></div>
+        <div class="panel-heading"><div><h2>Automatic ODO Log</h2><p>Created when a GPS drive is finished.</p></div><span class="read-only-badge">AUTO</span></div>
+        <div class="odo-log-table">
+          <div class="odo-log-header"><span>Date</span><span>Start</span><span>End</span><span>Distance</span><span>Fuel</span><span>Idle</span></div>
+          <div id="odometerHistory" class="odo-log-list"></div>
+        </div>
       </section>
     </section>
 
 
-    <section id="live" class="page">
+    <section id="live" class="page active">
       <section class="speed-dashboard">
         <div class="speed-topline">
           <div>
@@ -145,6 +109,9 @@
           <article><span>Maximum speed</span><strong id="liveMaximum">0.0 km/h</strong></article>
           <article><span>GPS accuracy</span><strong id="liveAccuracy">—</strong></article>
           <article><span>Estimated fuel used</span><strong id="liveFuelUsed">0.00 L</strong></article>
+          <article><span>Start ODO</span><strong id="liveStartOdometer">0.0 km</strong></article>
+          <article><span>Idle time</span><strong id="liveIdleTime">00:00:00</strong></article>
+          <article><span>Idle fuel</span><strong id="liveIdleFuel">0.00 L</strong></article>
         </div>
 
         <label class="dashboard-field">
@@ -154,8 +121,7 @@
 
         <div class="drive-actions">
           <button id="startDriveBtn" type="button">Start Drive</button>
-          <button id="pauseDriveBtn" class="secondary" type="button" disabled>Pause</button>
-          <button id="finishDriveBtn" class="danger" type="button" disabled>Finish & Save</button>
+          <button id="finishDriveBtn" class="danger" type="button" disabled>End Drive</button>
         </div>
 
         <div class="speed-warning">
@@ -203,21 +169,31 @@
       </section>
     </section>
 
-    <section id="trips" class="page">
-      <section class="panel">
-        <div class="panel-heading"><div><h2>Add Trip</h2><p>Use start and end odometer for accurate monitoring.</p></div></div>
-        <form id="tripForm" class="form-grid">
-          <label>Date<input id="tripDate" type="date" required /></label>
-          <label>Trip name<input id="tripName" type="text" required placeholder="Bolo to Pueblo and back" /></label>
-          <label>Start odometer<input id="tripStart" type="number" min="0" step="0.1" required /></label>
-          <label>End odometer<input id="tripEnd" type="number" min="0" step="0.1" required /></label>
-          <label class="full-width">Route / notes<input id="tripNote" type="text" /></label>
-          <button type="submit">Save Trip</button>
+    <section id="gasHistory" class="page">
+      <section class="panel fuel-monitor-panel">
+        <div class="panel-heading"><div><h2>Fuel Monitor</h2><p>Fuel remaining and refuel status based on your ODO.</p></div></div>
+        <div class="stats-grid fuel-monitor-grid">
+          <article class="stat-card"><span>Estimated Fuel Left</span><strong id="estimatedFuel">0.0 L</strong></article>
+          <article class="stat-card"><span>Average Economy</span><strong id="averageEconomy">8.0 km/L</strong></article>
+          <article class="stat-card"><span>Tank Capacity</span><strong id="tankCapacityDisplay">40.0 L</strong></article>
+          <article class="stat-card"><span>ODO Fuel Used</span><strong id="odometerFuelUsed">0.0 L</strong></article>
+          <article class="stat-card"><span>Latest Refuel</span><strong id="latestRefuelLiters">0.0 L</strong></article>
+          <article class="stat-card"><span>Refuel Cost</span><strong id="latestRefuelCost">₱0.00</strong></article>
+        </div>
+        <div class="quick-divider"><span>Record Refuel</span></div>
+        <form id="quickFuelForm" class="form-grid quick-fuel-form">
+          <label>ODO (km)<input id="quickFuelOdometer" type="number" min="0" step="0.1" required /></label>
+          <label>Liters added<input id="quickFuelLiters" type="number" min="0.01" step="0.01" required /></label>
+          <label>Cost (₱)<input id="quickFuelCost" type="number" min="0" step="0.01" required /></label>
+          <button type="submit">Save Refuel</button>
         </form>
       </section>
-      <section class="panel">
-        <div class="panel-heading"><div><h2>Trip History</h2><p>Distance and estimated fuel use.</p></div></div>
-        <div id="tripList" class="list"></div>
+      <section class="panel gas-history-panel">
+        <div class="panel-heading"><div><h2>Gas Refill Log</h2><p>View-only record of every refill, newest first.</p></div><span class="read-only-badge">READ ONLY</span></div>
+        <div class="gas-log-table">
+          <div class="gas-log-header"><span>Date</span><span>Liters</span><span>Cost</span><span>ODO</span><span>Price/L</span></div>
+          <div id="gasHistoryList" class="gas-log-list"></div>
+        </div>
       </section>
     </section>
 
@@ -280,7 +256,8 @@
           <label>Default economy (km/L)<input id="settingEconomy" type="number" min="1" step="0.1" /></label>
           <label>Tank capacity (L)<input id="settingTankCapacity" type="number" min="1" step="0.1" /></label>
           <label>Safety reserve (L)<input id="settingReserve" type="number" min="0" step="0.1" /></label>
-          <label>Current odometer<input id="settingOdometer" type="number" min="0" step="0.1" /></label>
+          <label>Idle fuel rate (L/hour)<input id="settingIdleRate" type="number" min="0" step="0.1" /></label>
+          <label>Starting ODO baseline (setup only)<input id="settingOdometer" type="number" min="0" step="0.1" /></label>
           <button type="submit">Save Settings</button>
         </form>
       </section>
@@ -303,17 +280,16 @@
   </main>
 
   <nav class="bottom-nav" aria-label="Main navigation">
-    <button data-page="dashboard" class="active"><span>⌂</span>Home</button>
     <button data-page="odometer"><span>▣</span>ODO</button>
-    <button data-page="live"><span>◉</span>Drive</button>
+    <button data-page="live" class="active"><span>◉</span>Drive</button>
     <button data-page="fuel"><span>⛽</span>Fuel</button>
-    <button data-page="trips"><span>↔</span>Trips</button>
+    <button data-page="gasHistory"><span>⛽</span>Gas</button>
     <button data-page="maintenance"><span>🔧</span>Service</button>
     <button data-page="issues"><span>⚠</span>Issues</button>
     <button data-page="settings"><span>⚙</span>Settings</button>
   </nav>
 
   <div id="toast" class="toast" role="status"></div>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>

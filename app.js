@@ -6,6 +6,7 @@ const defaultDB = {
     model: "1994 Nissan",
     plate: "",
     defaultEconomy: 8,
+    idleLitersPerHour: 0.8,
     tankCapacity: 40,
     reserveLiters: 5,
     currentOdometer: 0
@@ -48,10 +49,18 @@ function estimatedFuel(){
   let base;
   if(latest.fullTank) base=Number(db.settings.tankCapacity||0);
   else base=Number(latest.estimatedAfterFill ?? latest.liters ?? 0);
-  return Math.max(0,base-(distance/Number(db.settings.defaultEconomy||8)));
+  const idleFuel=(db.drives||[]).filter(d=>new Date(d.endedAt)>=new Date(latest.date)).reduce((sum,d)=>sum+Number(d.idleFuelLiters||0),0);
+  return Math.max(0,base-(distance/Number(db.settings.defaultEconomy||8))-idleFuel);
 }
 function estimatedRange(){
   return Math.max(0,(estimatedFuel()-Number(db.settings.reserveLiters||0))*Number(db.settings.defaultEconomy||8));
+}
+function odometerFuelConsumption(){
+  if(!db.fuel.length) return {distance:0,liters:0,idleLiters:0};
+  const latest=[...db.fuel].sort((a,b)=>b.odometer-a.odometer || new Date(b.date)-new Date(a.date))[0];
+  const distance=Math.max(0,Number(db.settings.currentOdometer||0)-Number(latest.odometer||0));
+  const idleLiters=(db.drives||[]).filter(d=>new Date(d.endedAt)>=new Date(latest.date)).reduce((sum,d)=>sum+Number(d.idleFuelLiters||0),0);
+  return {distance,idleLiters,liters:distance/Number(db.settings.defaultEconomy||8)+idleLiters};
 }
 function latestFuel(){
   return [...db.fuel].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
@@ -59,16 +68,20 @@ function latestFuel(){
 
 function renderDashboard(){
   const fuel=estimatedFuel(), range=estimatedRange();
+  const odoConsumption=odometerFuelConsumption();
   document.getElementById("estimatedFuel").textContent=`${num(fuel)} L`;
-  document.getElementById("estimatedRange").textContent=`Estimated safe range: ${Math.floor(range)} km`;
   document.getElementById("averageEconomy").textContent=`${num(db.settings.defaultEconomy)} km/L`;
+  document.getElementById("tankCapacityDisplay").textContent=`${num(db.settings.tankCapacity)} L`;
+  document.getElementById("odometerFuelUsed").textContent=`${num(odoConsumption.liters)} L`;
   document.getElementById("currentOdometer").textContent=`${num(db.settings.currentOdometer,1)} km`;
   const lf=latestFuel();
+  document.getElementById("latestRefuelLiters").textContent=lf?`${num(lf.liters,2)} L`:"0.0 L";
+  document.getElementById("latestRefuelCost").textContent=lf?money(lf.amount):money(0);
   document.getElementById("distanceSinceFuel").textContent=lf?`${num(db.settings.currentOdometer-lf.odometer)} km since last fuel entry`:"No fuel entry yet";
+  document.getElementById("quickFuelOdometer").value=db.settings.currentOdometer||"";
   const open=db.issues.filter(i=>i.status!=="Repaired");
   document.getElementById("openIssues").textContent=open.length;
   document.getElementById("urgentIssues").textContent=`${open.filter(i=>["High","Do not drive"].includes(i.severity)).length} urgent`;
-  document.getElementById("quickOdometer").value=db.settings.currentOdometer||"";
   document.getElementById("carNameHeader").textContent=db.settings.carName||"My Car Support";
   document.getElementById("carSubtitle").textContent=[db.settings.model,db.settings.plate].filter(Boolean).join(" • ")||"Offline vehicle monitor";
 
@@ -94,17 +107,12 @@ function renderDashboard(){
 
 function renderOdometer(){
   const current=Number(db.settings.currentOdometer||0);
-  const readings=[...(db.odometerReadings||[])].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const readings=[...(db.odometerReadings||[])].filter(r=>r.source==="drive").sort((a,b)=>new Date(b.date)-new Date(a.date));
   odometerDisplay.textContent=current.toFixed(1).padStart(8,"0");
-  odometerReading.value=current||"";
-  odometerLastUpdate.textContent=readings.length?new Date(readings[0].date).toLocaleString():"No reading yet";
-  const tracked=(db.trips||[]).reduce((sum,trip)=>sum+Math.max(0,Number.isFinite(trip.distanceKm)?trip.distanceKm:Number(trip.end||0)-Number(trip.start||0)),0);
+  odometerLastUpdate.textContent=readings.length?new Date(readings[0].date).toLocaleString():"No drive recorded yet";
+  const tracked=(db.drives||[]).reduce((sum,drive)=>sum+Number(drive.distanceKm||0),0);
   odometerTrackedDistance.textContent=`${num(tracked,1)} km`;
-  odometerHistory.innerHTML=readings.length?readings.map((reading,index)=>{
-    const previous=readings[index+1];
-    const difference=previous?Number(reading.value)-Number(previous.value):null;
-    return `<div class="list-item"><div class="list-item-head"><div><h3>${num(reading.value,1)} km</h3><p>${new Date(reading.date).toLocaleString()}</p><p>${esc(reading.note||"ODO reading")}</p></div>${difference!==null?`<span class="badge">+${num(Math.max(0,difference),1)} km</span>`:""}</div></div>`;
-  }).join(""):`<div class="empty">No ODO readings saved yet.</div>`;
+  odometerHistory.innerHTML=readings.length?readings.map(reading=>`<div class="odo-log-row"><time>${new Date(reading.date).toLocaleString()}</time><span>${num(reading.startOdometer,1)}</span><strong>${num(reading.endOdometer,1)}</strong><span>${num(reading.distanceKm,2)} km</span><span>${num(reading.fuelLiters,2)} L</span><span>${formatDuration(Number(reading.idleSeconds||0)*1000)}</span></div>`).join(""):`<div class="empty">No automatic ODO log yet. Finish a GPS drive to create one.</div>`;
 }
 
 function deleteItem(type,id){
@@ -114,9 +122,7 @@ function deleteItem(type,id){
 function renderLists(){
   const fuel=[...db.fuel].sort((a,b)=>new Date(b.date)-new Date(a.date));
   document.getElementById("fuelList").innerHTML=fuel.length?fuel.map(x=>`<div class="list-item"><div class="list-item-head"><div><h3>${num(x.liters,2)} L • ${money(x.amount)}</h3><p>${new Date(x.date).toLocaleString()} • ${num(x.odometer)} km</p><p>${esc(x.note||"No note")}${x.fullTank?" • Full tank":""}</p></div><span class="badge">${x.price?money(x.price)+"/L":"Fuel"}</span></div><div class="item-actions"><button class="danger" onclick="deleteItem('fuel','${x.id}')">Delete</button></div></div>`).join(""):`<div class="empty">No fuel entries.</div>`;
-
-  const trips=[...db.trips].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  document.getElementById("tripList").innerHTML=trips.length?trips.map(x=>{const d=Number.isFinite(x.distanceKm)?x.distanceKm:(x.end-x.start);return `<div class="list-item"><div class="list-item-head"><div><h3>${esc(x.name)}</h3><p>${x.date} • ${num(d)} km</p><p>Estimated fuel used: ${num(d/db.settings.defaultEconomy,2)} L</p><p>${esc(x.note||"")}</p></div><span class="badge">${num(d)} km</span></div><div class="item-actions"><button class="danger" onclick="deleteItem('trips','${x.id}')">Delete</button></div></div>`}).join(""):`<div class="empty">No trips recorded.</div>`;
+  document.getElementById("gasHistoryList").innerHTML=fuel.length?fuel.map(x=>`<div class="gas-log-row"><time>${new Date(x.date).toLocaleString()}</time><strong>${num(x.liters,2)} L</strong><span>${money(x.amount)}</span><span>${num(x.odometer,1)} km</span><span>${x.price?money(x.price):"—"}</span></div>`).join(""):`<div class="empty">No gas refill recorded yet. Add one above.</div>`;
 
   const ms=[...db.maintenance].sort((a,b)=>new Date(b.date)-new Date(a.date));
   document.getElementById("maintenanceList").innerHTML=ms.length?ms.map(x=>`<div class="list-item"><div class="list-item-head"><div><h3>${esc(x.category)} — ${esc(x.work)}</h3><p>${x.date}${x.odometer?` • ${x.odometer} km`:""} • ${money(x.cost)}</p><p>${x.nextKm?`Next: ${x.nextKm} km `:""}${x.nextDate?`• ${x.nextDate}`:""}</p></div><span class="badge">Service</span></div><div class="item-actions"><button class="danger" onclick="deleteItem('maintenance','${x.id}')">Delete</button></div></div>`).join(""):`<div class="empty">No maintenance records.</div>`;
@@ -129,7 +135,7 @@ function markRepaired(id){ const x=db.issues.find(i=>i.id===id);if(x){x.status="
 function renderSettings(){
   const s=db.settings;
   settingCarName.value=s.carName;settingModel.value=s.model;settingPlate.value=s.plate;
-  settingEconomy.value=s.defaultEconomy;settingTankCapacity.value=s.tankCapacity;settingReserve.value=s.reserveLiters;settingOdometer.value=s.currentOdometer;
+  settingEconomy.value=s.defaultEconomy;settingIdleRate.value=s.idleLitersPerHour;settingTankCapacity.value=s.tankCapacity;settingReserve.value=s.reserveLiters;settingOdometer.value=s.currentOdometer;
 }
 function renderAll(){ renderDashboard();renderOdometer();renderLists();renderSettings(); }
 
@@ -139,27 +145,17 @@ document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("clic
   btn.classList.add("active");document.getElementById(btn.dataset.page).classList.add("active");window.scrollTo(0,0);
 }));
 
-function saveOdometerReading(newOdo,note){
-  const old=Number(db.settings.currentOdometer||newOdo);
-  if(newOdo<old && !confirm("New odometer is lower than the saved reading. Continue?")) return;
-  if(newOdo>old){
-    db.trips.push({id:uid(),date:today(),name:note||"Odometer update",start:old,end:newOdo,note:"ODO reading"});
-  }
-  db.odometerReadings=db.odometerReadings||[];
-  db.odometerReadings.push({id:uid(),date:new Date().toISOString(),value:newOdo,note:note||""});
-  db.settings.currentOdometer=newOdo;
-  saveDB();showToast("ODO reading saved");
-  return true;
-}
-
-quickOdometerForm.addEventListener("submit",e=>{
+quickFuelForm.addEventListener("submit",e=>{
   e.preventDefault();
-  if(saveOdometerReading(Number(quickOdometer.value),quickTripNote.value.trim())) quickTripNote.value="";
-});
-
-odometerForm.addEventListener("submit",e=>{
-  e.preventDefault();
-  if(saveOdometerReading(Number(odometerReading.value),odometerNote.value.trim())) odometerNote.value="";
+  const liters=Number(quickFuelLiters.value), amount=Number(quickFuelCost.value||0), odometer=Number(quickFuelOdometer.value);
+  const before=estimatedFuel();
+  db.fuel.push({
+    id:uid(),date:nowLocal(),odometer,amount,liters,
+    price:liters?amount/liters:0,fullTank:false,note:"Quick refuel",
+    estimatedAfterFill:Math.min(Number(db.settings.tankCapacity),before+liters)
+  });
+  db.settings.currentOdometer=Math.max(Number(db.settings.currentOdometer||0),odometer);
+  quickFuelLiters.value="";quickFuelCost.value="";saveDB();showToast("Refuel recorded");
 });
 
 fuelForm.addEventListener("submit",e=>{
@@ -170,13 +166,6 @@ fuelForm.addEventListener("submit",e=>{
   entry.estimatedAfterFill=entry.fullTank?Number(db.settings.tankCapacity):Math.min(Number(db.settings.tankCapacity),before+liters);
   db.fuel.push(entry);db.settings.currentOdometer=Math.max(db.settings.currentOdometer,entry.odometer);
   fuelForm.reset();fuelDate.value=nowLocal();saveDB();showToast("Fuel entry saved");
-});
-
-tripForm.addEventListener("submit",e=>{
-  e.preventDefault();const start=Number(tripStart.value),end=Number(tripEnd.value);
-  if(end<start){alert("End odometer cannot be lower than start odometer.");return;}
-  db.trips.push({id:uid(),date:tripDate.value,name:tripName.value.trim(),start,end,note:tripNote.value.trim()});
-  db.settings.currentOdometer=Math.max(db.settings.currentOdometer,end);tripForm.reset();tripDate.value=today();saveDB();showToast("Trip saved");
 });
 
 maintenanceForm.addEventListener("submit",e=>{
@@ -191,20 +180,10 @@ issueForm.addEventListener("submit",e=>{
 
 
 // ---------- Live GPS driving dashboard ----------
-let driveState = {
-  running: false,
-  paused: false,
-  watchId: null,
-  startedAt: null,
-  elapsedBeforePauseMs: 0,
-  pauseStartedAt: null,
-  points: [],
-  distanceKm: 0,
-  currentSpeedKmh: 0,
-  maxSpeedKmh: 0,
-  wakeLock: null,
-  timerId: null
-};
+function createDriveState(){
+  return {running:false,paused:false,watchId:null,startedAt:null,elapsedBeforePauseMs:0,pauseStartedAt:null,points:[],distanceKm:0,currentSpeedKmh:0,maxSpeedKmh:0,wakeLock:null,timerId:null,startOdometer:Number(db.settings.currentOdometer||0),idleMs:0,lastTimerAt:null,lastGpsAt:null,hasGpsFix:false};
+}
+let driveState=createDriveState();
 
 function haversineKm(a,b){
   const R=6371;
@@ -224,12 +203,26 @@ function formatDuration(ms){
 }
 function renderLiveDrive(){
   const hours=driveElapsedMs()/3600000;
+  const idleFuel=(driveState.idleMs/3600000)*Number(db.settings.idleLitersPerHour??0.8);
+  const movingFuel=driveState.distanceKm/Number(db.settings.defaultEconomy||8);
   liveSpeed.textContent=Math.round(driveState.currentSpeedKmh||0);
   liveDistance.textContent=`${num(driveState.distanceKm,2)} km`;
   liveDuration.textContent=formatDuration(driveElapsedMs());
   liveAverage.textContent=`${hours>0?num(driveState.distanceKm/hours):"0.0"} km/h`;
   liveMaximum.textContent=`${num(driveState.maxSpeedKmh)} km/h`;
-  liveFuelUsed.textContent=`${num(driveState.distanceKm/Number(db.settings.defaultEconomy||8),2)} L`;
+  liveFuelUsed.textContent=`${num(movingFuel+idleFuel,2)} L`;
+  liveStartOdometer.textContent=`${num(driveState.startOdometer,1)} km`;
+  liveIdleTime.textContent=formatDuration(driveState.idleMs);
+  liveIdleFuel.textContent=`${num(idleFuel,2)} L`;
+}
+function updateDriveClock(){
+  const now=Date.now();
+  if(driveState.running&&!driveState.paused&&driveState.lastTimerAt){
+    const delta=Math.min(2000,now-driveState.lastTimerAt);
+    if(driveState.hasGpsFix&&now-driveState.lastGpsAt<15000&&driveState.currentSpeedKmh<3) driveState.idleMs+=Math.max(0,delta);
+  }
+  driveState.lastTimerAt=now;
+  renderLiveDrive();
 }
 function setGpsStatus(text,type=""){
   gpsStatus.textContent=text; gpsStatus.className=`gps-status ${type}`.trim();
@@ -257,6 +250,7 @@ function processPosition(position){
     setGpsStatus("Weak GPS signal","error");
     driveState.currentSpeedKmh=0;renderLiveDrive();return;
   }
+  driveState.hasGpsFix=true;driveState.lastGpsAt=Date.now();
 
   const previous=driveState.points.at(-1);
   let calculatedSpeed=0;
@@ -276,7 +270,7 @@ function processPosition(position){
   driveState.maxSpeedKmh=Math.max(driveState.maxSpeedKmh,driveState.currentSpeedKmh);
   driveState.points.push(point);
   if(driveState.points.length>5000) driveState.points.shift();
-  setGpsStatus("GPS tracking","active");
+  setGpsStatus(driveState.currentSpeedKmh<3?"Idling • GPS tracking":"GPS tracking","active");
   renderLiveDrive();
 }
 function gpsError(error){
@@ -297,48 +291,41 @@ function stopWatch(){
   driveState.watchId=null;
 }
 startDriveBtn.addEventListener("click",async()=>{
-  if(driveState.running && driveState.paused){
-    driveState.elapsedBeforePauseMs+=Date.now()-driveState.pauseStartedAt;
-    driveState.paused=false;driveState.pauseStartedAt=null;
-    beginWatch();await requestWakeLock();
-    startDriveBtn.textContent="Driving";startDriveBtn.disabled=true;
-    pauseDriveBtn.disabled=false;finishDriveBtn.disabled=false;
-    setGpsStatus("Finding GPS…");return;
-  }
-  driveState={running:true,paused:false,watchId:null,startedAt:Date.now(),elapsedBeforePauseMs:0,pauseStartedAt:null,points:[],distanceKm:0,currentSpeedKmh:0,maxSpeedKmh:0,wakeLock:null,timerId:null};
+  driveState=createDriveState();driveState.running=true;driveState.startedAt=Date.now();driveState.lastTimerAt=Date.now();
   if(!beginWatch()){driveState.running=false;return;}
   await requestWakeLock();
-  driveState.timerId=setInterval(renderLiveDrive,1000);
+  driveState.timerId=setInterval(updateDriveClock,1000);renderLiveDrive();
   startDriveBtn.textContent="Driving";startDriveBtn.disabled=true;
-  pauseDriveBtn.disabled=false;finishDriveBtn.disabled=false;
+  finishDriveBtn.disabled=false;
   setGpsStatus("Finding GPS…");
-});
-pauseDriveBtn.addEventListener("click",async()=>{
-  if(!driveState.running||driveState.paused)return;
-  driveState.paused=true;driveState.pauseStartedAt=Date.now();driveState.currentSpeedKmh=0;
-  stopWatch();await releaseWakeLock();
-  startDriveBtn.textContent="Resume";startDriveBtn.disabled=false;pauseDriveBtn.disabled=true;
-  setGpsStatus("Paused");renderLiveDrive();
 });
 finishDriveBtn.addEventListener("click",async()=>{
   if(!driveState.running)return;
+  updateDriveClock();
   const elapsed=driveElapsedMs();
   stopWatch();clearInterval(driveState.timerId);await releaseWakeLock();
   const name=liveTripName.value.trim()||`GPS Drive ${new Date(driveState.startedAt).toLocaleDateString()}`;
+  const movingFuelLiters=driveState.distanceKm/Number(db.settings.defaultEconomy||8);
+  const idleFuelLiters=(driveState.idleMs/3600000)*Number(db.settings.idleLitersPerHour??0.8);
+  const endOdometer=driveState.startOdometer+driveState.distanceKm;
   const record={
     id:uid(),name,startedAt:new Date(driveState.startedAt).toISOString(),
     endedAt:new Date().toISOString(),durationSeconds:Math.round(elapsed/1000),
     distanceKm:Number(driveState.distanceKm.toFixed(3)),
     averageSpeedKmh:elapsed>0?driveState.distanceKm/(elapsed/3600000):0,
     maxSpeedKmh:driveState.maxSpeedKmh,
-    estimatedFuelLiters:driveState.distanceKm/Number(db.settings.defaultEconomy||8)
+    startOdometer:driveState.startOdometer,endOdometer,
+    idleSeconds:Math.round(driveState.idleMs/1000),movingFuelLiters,idleFuelLiters,
+    estimatedFuelLiters:movingFuelLiters+idleFuelLiters
   };
   db.drives=db.drives||[];db.drives.push(record);
-  // Also save it to normal trip history without changing odometer automatically.
-  db.trips.push({id:uid(),date:today(),name, start:0,end:record.distanceKm,note:`GPS-recorded drive • ${formatDuration(elapsed)} • max ${num(record.maxSpeedKmh)} km/h`,gps:true,distanceKm:record.distanceKm});
-  saveDB();showToast("GPS drive saved");
-  driveState={running:false,paused:false,watchId:null,startedAt:null,elapsedBeforePauseMs:0,pauseStartedAt:null,points:[],distanceKm:0,currentSpeedKmh:0,maxSpeedKmh:0,wakeLock:null,timerId:null};
-  startDriveBtn.textContent="Start Drive";startDriveBtn.disabled=false;pauseDriveBtn.disabled=true;finishDriveBtn.disabled=true;
+  db.trips.push({id:uid(),date:today(),name,start:record.startOdometer,end:record.endOdometer,note:`GPS drive • idle ${formatDuration(driveState.idleMs)}`,gps:true,distanceKm:record.distanceKm});
+  db.settings.currentOdometer=endOdometer;
+  db.odometerReadings=db.odometerReadings||[];
+  db.odometerReadings.push({id:uid(),source:"drive",date:record.endedAt,startOdometer:record.startOdometer,endOdometer:record.endOdometer,distanceKm:record.distanceKm,fuelLiters:record.estimatedFuelLiters,idleSeconds:record.idleSeconds,driveId:record.id});
+  saveDB();showToast("Drive saved and ODO updated");
+  driveState=createDriveState();
+  startDriveBtn.textContent="Start Drive";startDriveBtn.disabled=false;finishDriveBtn.disabled=true;
   liveTripName.value="";liveAccuracy.textContent="—";setGpsStatus("GPS inactive");renderLiveDrive();
 });
 document.addEventListener("visibilitychange",async()=>{
@@ -346,7 +333,7 @@ document.addEventListener("visibilitychange",async()=>{
 });
 
 settingsForm.addEventListener("submit",e=>{
-  e.preventDefault();db.settings={carName:settingCarName.value.trim()||"My Car Support",model:settingModel.value.trim(),plate:settingPlate.value.trim(),defaultEconomy:Number(settingEconomy.value||8),tankCapacity:Number(settingTankCapacity.value||40),reserveLiters:Number(settingReserve.value||5),currentOdometer:Number(settingOdometer.value||0)};
+  e.preventDefault();db.settings={carName:settingCarName.value.trim()||"My Car Support",model:settingModel.value.trim(),plate:settingPlate.value.trim(),defaultEconomy:Number(settingEconomy.value||8),idleLitersPerHour:Number(settingIdleRate.value===""?0.8:settingIdleRate.value),tankCapacity:Number(settingTankCapacity.value||40),reserveLiters:Number(settingReserve.value||5),currentOdometer:Number(settingOdometer.value||0)};
   saveDB();showToast("Settings saved");
 });
 
@@ -376,5 +363,5 @@ window.addEventListener("appinstalled",()=>showToast("App installed"));
 
 if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js"));
 
-fuelDate.value=nowLocal();tripDate.value=today();maintenanceDate.value=today();issueDate.value=today();
+fuelDate.value=nowLocal();maintenanceDate.value=today();issueDate.value=today();
 renderAll();
